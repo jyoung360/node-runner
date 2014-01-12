@@ -14,17 +14,18 @@ var clusterParameters = {
 	,"Parameters" : []
 }
 
-var getJsonConfig = function(callback) {
-	fs.readFile('../templates/base_ami.json', 'utf8', function (err, data) {
+var getJsonConfig = function(filename, parameters, callback) {
+	fs.readFile(filename, 'utf8', function (err, data) {
 		if (err) {
 			return callback(err);
 		}
-		var parameters = {
+		var config = {
 			"StackName" : "node-stack-"+Math.round(Math.random()*1000)
 			,"TemplateBody" : data
 			,"Capabilities" : ["CAPABILITY_IAM"]
+			,"Parameters" : parameters
 		}
-		return callback(null,parameters);
+		return callback(null,config);
 	});
 }
 
@@ -48,6 +49,9 @@ var isStackComplete = function(stackName, callback) {
 			console.log(response.Stacks[0].StackStatus);
 			if(response.Stacks[0].StackStatus === "CREATE_COMPLETE") {
 				return callback(null,stackName);
+			}
+			else if(response.Stacks[0].StackStatus === "ROLLBACK_COMPLETE") {
+				return callback('Deployment Failed')
 			}
 			else {
 				return setTimeout(function() {
@@ -114,6 +118,21 @@ var determineStackStatus = function(desiredState,statusCheck,callback) {
 		}
 		else {
 			callback(response.Stacks[0].StackStatus,desiredState,imageInstance,function() { determineStackStatus(desiredState,callback); });
+		}
+	});
+}
+
+var tagResources = function(resources, tags, stackName, callback) {
+	var params = {
+		"Resources" : resources,
+		"Tags" : tags
+	}
+	ec2.createTags(params, function(err,response) {
+		if(err) {
+			return callback(err);
+		}
+		else {
+			callback(null,stackName);
 		}
 	});
 }
@@ -186,24 +205,53 @@ var sendUpdate = function(message,callback) {
 	sns.publish({"TopicArn" : "arn:aws:sns:us-west-2:176232384384:Graboid", "Message":message},callback);	
 }
 
-async.waterfall([
-		function(callback) {
-			getJsonConfig(callback);
-		},
-		function(parameters,callback) {
-			createInstance(parameters,callback);
-		},
-		function(stackName, callback){
-			console.log("Stack %j created",stackName);
-			createAmi(stackName,callback);
-		},
-		function(ami, stackName, callback){
-			console.log("AMI %j created in stack %j",ami,stackName);
-			terminateStack(stackName,callback);
-		}
-	], function (err, result) {
-		console.log(err);
-		console.log(result);
-});
+exports.doIt = function(service,version,templateFile){
+	async.waterfall([
+			function(callback) {
+				var parameters = [
+					{
+						"ParameterKey":"GitHubRepo",
+						"ParameterValue":service
+					},
+					{
+						"ParameterKey":"GitHubSHA",
+						"ParameterValue":version
+					},
+				];
+				getJsonConfig('../templates/asymptomatic-service/cloudformation/base_ami.json', parameters, callback);
+			},
+			function(parameters,callback) {
+				createInstance(parameters,callback);
+			},
+			function(stackName, callback){
+				console.log("Stack %j created",stackName);
+				createAmi(stackName,callback);
+			},
+			function(imageId,stackName, callback){
+				console.log("AMI %j created in stack %j",imageId,stackName);
+				var tags = [
+					{
+						"Key" : "Version",
+						"Value" : version
+					},
+					{
+						"Key" : "Service",
+						"Value" : service
+					},
+					{
+						"Key" : "Build Date",
+						"Value" : new Date().toISOString()
+					},
+				]
+				tagResources([imageId],tags,stackName,callback);
+			},
+			function(stackName, callback){
+				console.log("Image tagged successfully");
+				terminateStack(stackName,callback);
+			}
+		], function (err, result) {
+			console.log(err);
+			console.log(result);
+	});
+};
 
-//determineImageStatus('ami-a40b9094','available',checkResult);
