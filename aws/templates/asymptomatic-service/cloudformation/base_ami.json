@@ -157,6 +157,13 @@
                 "owner"  : "root",
                 "group"  : "root",
                 "authentication" : "S3AccessCreds"
+              },
+              "/opt/node/aws/config.json" : {
+                "source" : { "Fn::Join" : ["", ["http://", { "Ref" : "BucketName" },".s3.amazonaws.com/config.json"]]},
+                "mode"   : "000644",
+                "owner"  : "root",
+                "group"  : "root",
+                "authentication" : "S3AccessCreds"
               }
             }
           },

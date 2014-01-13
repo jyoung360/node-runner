@@ -1,5 +1,5 @@
 var AWS = require('aws-sdk');
-AWS.config.loadFromPath('./prod_config.json');
+AWS.config.loadFromPath('/opt/node/aws/config.json');
 var ec2 = new AWS.EC2();
 
 ec2.describeSnapshots({"OwnerIds":['self']}, function(err,data){

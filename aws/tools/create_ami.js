@@ -1,6 +1,6 @@
 var AWS = require('aws-sdk');
 var fs = require('fs');
-AWS.config.loadFromPath('./config.json');
+AWS.config.loadFromPath('/opt/node/aws/config.json');
 var cloud = new AWS.CloudFormation();
 var ec2 = new AWS.EC2();
 var sns = new AWS.SNS();
