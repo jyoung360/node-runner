@@ -34,7 +34,7 @@
     "ServerPort" : {
       "Description" : "Port the server will run on",
       "Type" : "String",
-      "Default" : "80"
+      "Default" : "443"
     },
     "GitHubRepo" : {
       "Description" : "The GitHub repo to be cloned",
@@ -164,6 +164,26 @@
                 "owner"  : "root",
                 "group"  : "root",
                 "authentication" : "S3AccessCreds"
+              },
+              "/opt/node/version" : {
+                "content" : { "Ref" : "GitHubSHA" },
+                "mode"  : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/opt/node/ssl/key.pem" : {
+                "source" : { "Fn::Join" : ["", ["http://", { "Ref" : "BucketName" },".s3.amazonaws.com/key.pem"]]},
+                "mode"  : "000644",
+                "owner" : "root",
+                "group" : "root",
+                "authentication" : "S3AccessCreds"
+              },
+              "/opt/node/ssl/key-cert.pem" : {
+                "source" : { "Fn::Join" : ["", ["http://", { "Ref" : "BucketName" },".s3.amazonaws.com/key-cert.pem"]]},
+                "mode"  : "000644",
+                "owner" : "root",
+                "group" : "root",
+                "authentication" : "S3AccessCreds"
               }
             }
           },
@@ -260,7 +280,7 @@
     "WebServerSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Enable HTTP access via port 80",
+        "GroupDescription" : "Enable HTTP access via port 443",
         "SecurityGroupIngress" : [
           {"IpProtocol" : "tcp", "FromPort" : { "Ref" : "ServerPort" }, "ToPort" : { "Ref" : "ServerPort" }, "CidrIp" : "0.0.0.0/0"},
           {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
