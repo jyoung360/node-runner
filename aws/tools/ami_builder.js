@@ -3,6 +3,10 @@ var create = require('./create_ami');
 var prompt = require('prompt');
 var async = require('async');
 
+var accessTokens = require('./access_tokens.js');
+
+console.log(accessTokens);
+
 var getCommits = function(repoPath,callback) {
 	var options = {
 		hostname: 'api.github.com',
@@ -29,13 +33,25 @@ var getCommits = function(repoPath,callback) {
 	});
 }
 
+var getConfigFiles = function(callback) {
+	var obj = [
+		{"filename" : "asymptomatic-service/cloudformation/base_ami.json"},
+		{"filename" : "myapp/cloudformation/base_ami.json"},
+		{"filename" : "express/cloudformation/base_ami.json"}
+	];
+
+	return callback(null, obj);
+}
+
 var getRepos = function(userPath, callback) {
 	var options = {
 		hostname: 'api.github.com',
 		port: 443,
 		path: userPath,
 		method: 'GET',
-		headers: { 'User-Agent':'jyoung360'}
+		headers: { 
+			'User-Agent':'jyoung360'
+		}
 	};
 
 	var json = '';
@@ -59,6 +75,7 @@ var getRepos = function(userPath, callback) {
 var username;
 var repoName;
 var SHA;
+var configFile;
 
 prompt.start();
 prompt.message = "";
@@ -76,7 +93,8 @@ async.waterfall([
 		},
 		function(result,callback) {
 			username = result.question;
-			getRepos('/users/'+username+'/repos',callback);
+			if(!accessTokens[username]) { return callback('No access token for username: '+username); }
+			getRepos('/user/repos?access_token='+accessTokens[username],callback);
 		},
 		function(repos, callback){
 			for(var i in repos) {
@@ -94,7 +112,7 @@ async.waterfall([
 			});
 		},
 		function(callback){
-			getCommits('/repos/'+username+'/'+repoName+'/commits',callback);
+			getCommits('/repos/'+username+'/'+repoName+'/commits?access_token='+accessTokens[username],callback);
 		},
 		function(commits, callback){
 			for(var i in commits) {
@@ -110,13 +128,31 @@ async.waterfall([
 				SHA = commits[result.question].sha;
 				return callback(null);
 			});
+		},
+		function(callback){
+			getConfigFiles(callback);
+		},
+		function(configs, callback){
+			for(var i in configs) {
+				console.log("%s) %s",i,configs[i].filename);
+			}
+			prompt.get([{
+				description: 'Select a config file'.cyan,
+				type: 'string',
+				pattern: /^.+$/,
+				required: true
+			}], function(err,result) {
+				configFile = configs[result.question].filename;
+				return callback(null);
+			});
 		}
 	], function (err, result) {
 		if(err) {
 			console.error(err);
 			return;
 		}
-		create.doIt('git@github.com:'+username+'/'+repoName,SHA);
+		//console.log(configFile);
+		create.doIt('git@github.com:'+username+'/'+repoName,SHA,configFile);
 });
 
 return;

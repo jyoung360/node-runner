@@ -218,7 +218,7 @@ exports.doIt = function(service,version,templateFile){
 						"ParameterValue":version
 					},
 				];
-				getJsonConfig('../templates/asymptomatic-service/cloudformation/base_ami.json', parameters, callback);
+				getJsonConfig('../templates/'+templateFile, parameters, callback);
 			},
 			function(parameters,callback) {
 				createInstance(parameters,callback);

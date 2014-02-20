@@ -11,7 +11,7 @@
       "MinLength": "1",
       "MaxLength": "64",
       "AllowedPattern" : "[-_ a-zA-Z0-9]*",
-      "Default" : "jyoung",
+      "Default" : "synap",
       "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
     },    
     "InstanceType" : {
@@ -34,7 +34,7 @@
     "ServerPort" : {
       "Description" : "Port the server will run on",
       "Type" : "String",
-      "Default" : "443"
+      "Default" : "80"
     },
     "GitHubRepo" : {
       "Description" : "The GitHub repo to be cloned",
@@ -206,7 +206,7 @@
                 "authentication" : "S3AccessCreds"
               },
               "/etc/init/node-service.conf" : {
-                "source" : { "Fn::Join" : ["", ["http://", { "Ref" : "BucketName" },".s3.amazonaws.com/node-service-ssl.conf"]]},
+                "source" : { "Fn::Join" : ["", ["http://", { "Ref" : "BucketName" },".s3.amazonaws.com/node-service.conf"]]},
                 "mode"   : "000644",
                 "owner"  : "root",
                 "group"  : "root",
@@ -297,7 +297,7 @@
     "WebServerSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Enable HTTP access via port 443",
+        "GroupDescription" : "Enable HTTP access via port 80",
         "SecurityGroupIngress" : [
           {"IpProtocol" : "tcp", "FromPort" : { "Ref" : "ServerPort" }, "ToPort" : { "Ref" : "ServerPort" }, "CidrIp" : "0.0.0.0/0"},
           {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
